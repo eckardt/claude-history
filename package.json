@@ -1,6 +1,6 @@
 {
   "name": "claude-history",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Get shell commands from Claude Code conversation history. Because Claude's commands don't appear in your shell history.",
   "main": "dist/cli.js",
   "bin": {
