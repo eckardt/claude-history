@@ -1,0 +1,74 @@
+{
+  "name": "claude-history",
+  "version": "0.1.0",
+  "description": "Get shell commands from Claude Code conversation history. Because Claude's commands don't appear in your shell history.",
+  "main": "dist/cli.js",
+  "bin": {
+    "claude-history": "bin/claude-history.js"
+  },
+  "type": "module",
+  "files": [
+    "dist/",
+    "bin/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "check": "biome check src/",
+    "check:fix": "biome check --write src/",
+    "format": "biome format --write src/",
+    "lint": "biome lint src/",
+    "lint:fix": "biome lint --write src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:ci": "npm run build && vitest --run",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "pretest:coverage": "npm run build",
+    "test:coverage": "vitest --coverage",
+    "test:coverage:ui": "vitest --coverage --ui",
+    "preversion": "npm run check && npm run test:coverage -- --run && npm run build",
+    "postversion": "node scripts/update-version.js",
+    "prepublishOnly": "npm run typecheck && npm run check && npm run test && npm run build",
+    "release:patch": "npm version patch && git push && git push --tags",
+    "release:minor": "npm version minor && git push && git push --tags",
+    "release:major": "npm version major && git push && git push --tags",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "history",
+    "cli",
+    "shell",
+    "commands",
+    "terminal"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "^22.15.30",
+    "@vitest/coverage-v8": "^3.2.2",
+    "@vitest/ui": "^3.2.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.2"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,js}": [
+      "biome check --write",
+      "tsc --noEmit"
+    ]
+  }
+}
