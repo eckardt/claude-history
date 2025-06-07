@@ -1,14 +1,14 @@
 # claude-history
 
-Get shell commands from Claude Code conversation history. Because Claude's commands don't appear in your shell history.
+Get shell commands from Claude Code conversation history. Because commands Claude runs via the Bash tool don't appear in your shell history.
 
 ```bash
 $ claude-history --global | tail -5
-   1  [my-app         ] npm install express
-   2  [data-project   ] python analyze.py --input data.csv
-   3  [my-app         ] docker build -t myapp .
-   4  [claude-history ] npm run check
-   5  [my-app         ] npm test
+  47  [api-server     ] git pull origin main
+  48  [api-server     ] git log --oneline -5
+  49  [api-server     ] docker-compose up -d
+  50  [api-server     ] curl -I localhost:8080/health
+  51  [frontend       ] git status
 ```
 
 ## Install
@@ -19,7 +19,7 @@ npm install -g claude-history
 
 Or use `npx` to try without installing:
 ```bash
-npx claude-history | tail -5
+npx claude-history
 ```
 
 ## Usage
@@ -31,12 +31,12 @@ claude-history --list-projects    # See all available projects
 claude-history | grep docker      # Find Docker commands  
 claude-history | tail -5          # Last 5 commands
 claude-history my-app | tail -10  # Last 10 from specific project
-claude-history ~/dev/my-app       # Project by full path
+claude-history ~/code/my-app      # Project by full path
 ```
 
 ## What It Does
 
-- Find commands Claude executed across all your projects
+- Find commands Claude executed via the Bash tool across all your projects
 - Search command history with standard Unix tools (`grep`, `awk`, etc.)
 - Copy command sequences from past sessions
 - See which project each command came from
@@ -59,11 +59,8 @@ claude-history --global | grep npm
 # Get last 20 Docker commands
 claude-history --global | grep docker | tail -20
 
-# Export project history for documentation
-claude-history my-api > project-commands.txt
-
 # Count commands by type
-claude-history --global | awk '{print $NF}' | sort | uniq -c
+claude-history --global | sed 's/.*] //' | awk '{print $1}' | sort | uniq -c | sort -nr | head -10
 ```
 
 ## Command Sources
