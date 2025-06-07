@@ -1,6 +1,6 @@
 {
   "name": "claude-history",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Get shell commands from Claude Code conversation history. Because Claude's commands don't appear in your shell history.",
   "main": "dist/cli.js",
   "bin": {
@@ -16,7 +16,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/update-version.js && tsc",
     "dev": "tsx src/cli.ts",
     "start": "node dist/cli.js",
     "check": "biome check src/",
@@ -33,7 +33,6 @@
     "test:coverage": "vitest --coverage",
     "test:coverage:ui": "vitest --coverage --ui",
     "preversion": "npm run check && npm run test:coverage -- --run && npm run build",
-    "postversion": "node scripts/update-version.js",
     "prepublishOnly": "npm run typecheck && npm run check && npm run test && npm run build",
     "release:patch": "npm version patch && git push && git push --tags",
     "release:minor": "npm version minor && git push && git push --tags",
