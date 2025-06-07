@@ -2,7 +2,8 @@ import type { ClaudeCommand } from './types.js';
 
 export interface ProjectInfo {
   name: string;
-  path: string;
+  actualPath: string;
+  claudePath: string;
   encodedName: string;
   lastModified: Date;
 }
@@ -39,9 +40,9 @@ export class OutputFormatter {
     }
 
     const lines = projects.map((project) => {
-      const projectName = this.extractProjectName(project.name);
+      const projectName = project.name; // Already basename from actualPath
       const nameColumn = projectName.padEnd(20);
-      const pathColumn = `(${project.name})`;
+      const pathColumn = `(${project.actualPath})`;
       return `${nameColumn} ${pathColumn}`;
     });
 

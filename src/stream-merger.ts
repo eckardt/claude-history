@@ -6,7 +6,8 @@ import type { ClaudeCommand } from './types.js';
 
 export interface ProjectInfo {
   name: string;
-  path: string;
+  actualPath: string;
+  claudePath: string;
   encodedName: string;
   lastModified: Date;
 }
@@ -43,13 +44,13 @@ export class StreamMerger {
 
     if (projects.length === 1) {
       // Single project - just stream it directly
-      yield* createResilientCommandStream(projects[0].path);
+      yield* createResilientCommandStream(projects[0].claudePath);
       return;
     }
 
     // Create streams for each project
     const streamBuffers: StreamWithBuffer[] = projects.map((project) => ({
-      stream: createResilientCommandStream(project.path),
+      stream: createResilientCommandStream(project.claudePath),
       buffer: null,
       exhausted: false,
     }));

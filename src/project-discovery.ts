@@ -1,11 +1,13 @@
 import { access, readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { JSONLStreamParser } from './jsonl-stream-parser.js';
 
 export interface ProjectInfo {
-  name: string;
-  path: string;
-  encodedName: string;
+  name: string; // Human-readable project name (from actual cwd)
+  actualPath: string; // Real filesystem path (e.g., /Users/user/dev/project/subdir)
+  claudePath: string; // Claude projects directory path (e.g., ~/.claude/projects/-Users-user-dev-project-subdir)
+  encodedName: string; // Encoded directory name (e.g., -Users-user-dev-project-subdir)
   lastModified: Date;
 }
 
@@ -23,19 +25,31 @@ export class ProjectDiscovery {
     try {
       const projectDirs = await readdir(this.claudeProjectsDir);
       const projects: ProjectInfo[] = [];
+      const parser = new JSONLStreamParser();
 
       for (const encodedName of projectDirs) {
         try {
-          const projectPath = join(this.claudeProjectsDir, encodedName);
-          const stats = await stat(projectPath);
+          const claudePath = join(this.claudeProjectsDir, encodedName);
+          const stats = await stat(claudePath);
 
           if (stats.isDirectory()) {
-            projects.push({
-              name: this.decodeProjectPath(encodedName),
-              path: projectPath,
-              encodedName,
-              lastModified: stats.mtime,
-            });
+            // Extract actual project path from JSONL files
+            const actualPath = await parser.extractProjectRoot(claudePath);
+
+            if (actualPath) {
+              projects.push({
+                name: basename(actualPath), // Use directory name as display name
+                actualPath,
+                claudePath,
+                encodedName,
+                lastModified: stats.mtime,
+              });
+            } else {
+              // Fallback: if no cwd found, skip this project
+              console.error(`No cwd found in project: ${encodedName}`, {
+                file: 'stderr',
+              });
+            }
           }
         } catch {
           // Skip invalid project directories
@@ -59,15 +73,16 @@ export class ProjectDiscovery {
   async getCurrentProject(): Promise<ProjectInfo | null> {
     const currentDir = process.cwd();
     const encodedPath = this.encodeProjectPath(currentDir);
-    const projectPath = join(this.claudeProjectsDir, encodedPath);
+    const claudePath = join(this.claudeProjectsDir, encodedPath);
 
     try {
-      await access(projectPath);
-      const stats = await stat(projectPath);
+      await access(claudePath);
+      const stats = await stat(claudePath);
 
       return {
-        name: currentDir,
-        path: projectPath,
+        name: basename(currentDir),
+        actualPath: currentDir,
+        claudePath,
         encodedName: encodedPath,
         lastModified: stats.mtime,
       };
@@ -86,22 +101,37 @@ export class ProjectDiscovery {
     let match = projects.find((p) => p.encodedName === searchTerm);
     if (match) return match;
 
-    // Exact match on decoded name
+    // Exact match on project name (basename of actual path)
     match = projects.find((p) => p.name === searchTerm);
     if (match) return match;
 
-    // Exact match on directory name (last component of path)
-    match = projects.find((p) => {
-      const dirName = p.name.split('/').pop() || '';
-      return dirName.toLowerCase() === searchTerm.toLowerCase();
+    // Exact match on any directory name in the path (prioritize this)
+    const exactDirMatches = projects.filter((p) => {
+      const pathParts = p.actualPath.split('/');
+      return pathParts.some(
+        (part) => part.toLowerCase() === searchTerm.toLowerCase()
+      );
     });
-    if (match) return match;
 
-    // Partial match on name (case insensitive)
+    if (exactDirMatches.length === 1) {
+      return exactDirMatches[0];
+    }
+
+    if (exactDirMatches.length > 1) {
+      // If multiple exact matches, prefer the shorter path (more specific)
+      const shortestPath = exactDirMatches.reduce((shortest, current) =>
+        current.actualPath.length < shortest.actualPath.length
+          ? current
+          : shortest
+      );
+      return shortestPath;
+    }
+
+    // Partial match on actual path (case insensitive) - only if no exact dir matches
     const matches = projects.filter(
       (p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.encodedName.toLowerCase().includes(searchTerm.toLowerCase())
+        p.actualPath.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (matches.length === 1) {
@@ -109,11 +139,13 @@ export class ProjectDiscovery {
     }
 
     if (matches.length > 1) {
-      console.error(`Multiple projects found matching '${searchTerm}':`);
-      for (const match of matches) {
-        console.error(`  ${match.name}`);
-      }
-      throw new Error('Please be more specific');
+      // If multiple partial matches, prefer the shortest path (most specific)
+      const shortestPath = matches.reduce((shortest, current) =>
+        current.actualPath.length < shortest.actualPath.length
+          ? current
+          : shortest
+      );
+      return shortestPath;
     }
 
     return null;

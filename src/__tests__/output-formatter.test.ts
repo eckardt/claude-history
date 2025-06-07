@@ -112,8 +112,9 @@ describe('OutputFormatter', () => {
     it('should format single project', () => {
       const projects: ProjectInfo[] = [
         {
-          name: '/Users/test/my-project',
-          path: '/home/.claude/projects/-Users-test-my-project',
+          name: 'my-project',
+          actualPath: '/Users/test/my-project',
+          claudePath: '/home/.claude/projects/-Users-test-my-project',
           encodedName: '-Users-test-my-project',
           lastModified: new Date(),
         },
@@ -126,14 +127,16 @@ describe('OutputFormatter', () => {
     it('should format multiple projects', () => {
       const projects: ProjectInfo[] = [
         {
-          name: '/Users/test/codetracker',
-          path: '/home/.claude/projects/-Users-test-codetracker',
+          name: 'codetracker',
+          actualPath: '/Users/test/codetracker',
+          claudePath: '/home/.claude/projects/-Users-test-codetracker',
           encodedName: '-Users-test-codetracker',
           lastModified: new Date('2025-06-07T12:01:00.000Z'),
         },
         {
-          name: '/Users/test/app',
-          path: '/home/.claude/projects/-Users-test-app',
+          name: 'app',
+          actualPath: '/Users/test/app',
+          claudePath: '/home/.claude/projects/-Users-test-app',
           encodedName: '-Users-test-app',
           lastModified: new Date('2025-06-07T12:00:00.000Z'),
         },
@@ -150,14 +153,17 @@ describe('OutputFormatter', () => {
     it('should handle project names with various lengths', () => {
       const projects: ProjectInfo[] = [
         {
-          name: '/Users/test/very-long-project-name-here',
-          path: '/home/.claude/projects/-Users-test-very-long-project-name-here',
+          name: 'very-long-project-name-here',
+          actualPath: '/Users/test/very-long-project-name-here',
+          claudePath:
+            '/home/.claude/projects/-Users-test-very-long-project-name-here',
           encodedName: '-Users-test-very-long-project-name-here',
           lastModified: new Date(),
         },
         {
-          name: '/Users/test/x',
-          path: '/home/.claude/projects/-Users-test-x',
+          name: 'x',
+          actualPath: '/Users/test/x',
+          claudePath: '/home/.claude/projects/-Users-test-x',
           encodedName: '-Users-test-x',
           lastModified: new Date(),
         },

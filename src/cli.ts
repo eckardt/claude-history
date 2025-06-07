@@ -54,6 +54,11 @@ export async function createCommandStream(
     : await discovery.getCurrentProject();
 
   if (!project) {
+    if (projectName) {
+      // User explicitly provided a project name that doesn't exist
+      throw new Error(`Project '${projectName}' not found`);
+    }
+    // No project name provided and current directory has no project - fall back to global
     console.error(
       'No project found. Showing global history from all projects.',
       { file: 'stderr' }
@@ -66,7 +71,7 @@ export async function createCommandStream(
   }
 
   return {
-    stream: createResilientCommandStream(project.path),
+    stream: createResilientCommandStream(project.claudePath),
     isGlobal: false,
   };
 }

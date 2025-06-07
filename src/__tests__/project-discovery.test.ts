@@ -4,6 +4,27 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectDiscovery } from '../project-discovery.js';
 
+// Helper function to create mock JSONL files with proper cwd field
+async function createMockProject(
+  projectDir: string,
+  actualPath: string,
+  additionalEntries: unknown[] = []
+) {
+  await mkdir(projectDir, { recursive: true });
+
+  const baseEntry = {
+    cwd: actualPath,
+    type: 'user',
+    message: { role: 'user', content: [] },
+    timestamp: new Date().toISOString(),
+  };
+
+  const entries = [baseEntry, ...additionalEntries];
+  const jsonlContent = entries.map((entry) => JSON.stringify(entry)).join('\n');
+
+  await writeFile(join(projectDir, 'session1.jsonl'), jsonlContent);
+}
+
 // Mock os.homedir to return our test directory
 vi.mock('os', async (importOriginal) => {
   const actual = await importOriginal<typeof import('os')>();
@@ -47,18 +68,21 @@ describe('ProjectDiscovery', () => {
       const project1 = join(testClaudeDir, '-Users-test-project1');
       const project2 = join(testClaudeDir, '-Users-test-project2');
 
-      await mkdir(project1);
-      await mkdir(project2);
-
-      // Add some content to make them look like real projects
-      await writeFile(join(project1, 'session1.jsonl'), '{}');
-      await writeFile(join(project2, 'session2.jsonl'), '{}');
+      // Create mock projects with cwd field
+      await createMockProject(project1, '/Users/test/project1');
+      await createMockProject(project2, '/Users/test/project2');
 
       const projects = await discovery.getAllProjects();
 
       expect(projects).toHaveLength(2);
-      expect(projects.map((p) => p.name)).toContain('/Users/test/project1');
-      expect(projects.map((p) => p.name)).toContain('/Users/test/project2');
+      expect(projects.map((p) => p.name)).toContain('project1');
+      expect(projects.map((p) => p.name)).toContain('project2');
+      expect(projects.map((p) => p.actualPath)).toContain(
+        '/Users/test/project1'
+      );
+      expect(projects.map((p) => p.actualPath)).toContain(
+        '/Users/test/project2'
+      );
       expect(projects.map((p) => p.encodedName)).toContain(
         '-Users-test-project1'
       );
@@ -71,21 +95,19 @@ describe('ProjectDiscovery', () => {
       const project1 = join(testClaudeDir, '-Users-test-old');
       const project2 = join(testClaudeDir, '-Users-test-new');
 
-      await mkdir(project1);
-      await writeFile(join(project1, 'test.jsonl'), '{}');
+      await createMockProject(project1, '/Users/test/old');
 
       // Wait a bit to ensure different timestamps
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      await mkdir(project2);
-      await writeFile(join(project2, 'test.jsonl'), '{}');
+      await createMockProject(project2, '/Users/test/new');
 
       const projects = await discovery.getAllProjects();
 
       expect(projects).toHaveLength(2);
       // Most recent should be first
-      expect(projects[0].name).toBe('/Users/test/new');
-      expect(projects[1].name).toBe('/Users/test/old');
+      expect(projects[0].name).toBe('new');
+      expect(projects[1].name).toBe('old');
     });
 
     it('should handle access errors gracefully', async () => {
@@ -103,13 +125,13 @@ describe('ProjectDiscovery', () => {
       const encodedCurrentDir = currentDir.replace(/\//g, '-');
       const projectDir = join(testClaudeDir, encodedCurrentDir);
 
-      await mkdir(projectDir);
-      await writeFile(join(projectDir, 'test.jsonl'), '{}');
+      await createMockProject(projectDir, currentDir);
 
       const project = await discovery.getCurrentProject();
 
       expect(project).toBeTruthy();
-      expect(project?.name).toBe(currentDir);
+      expect(project?.name).toBe('claude-history'); // basename of current dir
+      expect(project?.actualPath).toBe(currentDir);
       expect(project?.encodedName).toBe(encodedCurrentDir);
     });
 
@@ -121,17 +143,22 @@ describe('ProjectDiscovery', () => {
 
   describe('getProject', () => {
     beforeEach(async () => {
-      // Set up test projects
+      // Set up test projects with proper cwd fields
       const projects = [
-        '-Users-test-my-app',
-        '-Users-test-another-project',
-        '-Users-different-path-myapp',
+        { encoded: '-Users-test-my-app', actual: '/Users/test/my/app' },
+        {
+          encoded: '-Users-test-another-project',
+          actual: '/Users/test/another/project',
+        },
+        {
+          encoded: '-Users-different-path-myapp',
+          actual: '/Users/different/path/myapp',
+        },
       ];
 
       for (const project of projects) {
-        const projectDir = join(testClaudeDir, project);
-        await mkdir(projectDir);
-        await writeFile(join(projectDir, 'test.jsonl'), '{}');
+        const projectDir = join(testClaudeDir, project.encoded);
+        await createMockProject(projectDir, project.actual);
       }
     });
 
@@ -140,21 +167,23 @@ describe('ProjectDiscovery', () => {
 
       expect(project).toBeTruthy();
       expect(project?.encodedName).toBe('-Users-test-my-app');
-      expect(project?.name).toBe('/Users/test/my/app');
+      expect(project?.actualPath).toBe('/Users/test/my/app');
+      expect(project?.name).toBe('app'); // basename
     });
 
     it('should find project by exact decoded name match', async () => {
-      const project = await discovery.getProject('/Users/test/my/app');
+      const project = await discovery.getProject('app');
 
       expect(project).toBeTruthy();
-      expect(project?.name).toBe('/Users/test/my/app');
+      expect(project?.actualPath).toBe('/Users/test/my/app');
+      expect(project?.name).toBe('app');
     });
 
     it('should find project by partial name match', async () => {
-      const project = await discovery.getProject('my-app');
+      const project = await discovery.getProject('my');
 
       expect(project).toBeTruthy();
-      expect(project?.name).toBe('/Users/test/my/app');
+      expect(project?.actualPath).toBe('/Users/test/my/app');
     });
 
     it('should return null for non-existent project', async () => {
@@ -162,31 +191,39 @@ describe('ProjectDiscovery', () => {
       expect(project).toBeNull();
     });
 
-    it('should throw error for ambiguous matches', async () => {
-      // 'test' should match both 'my-app' and 'another-project' (in partial matching)
-      await expect(discovery.getProject('test')).rejects.toThrow(
-        'Please be more specific'
-      );
+    it('should resolve ambiguous matches by preferring shorter path', async () => {
+      // 'test' should match both paths, but prefer the shorter one
+      const project = await discovery.getProject('test');
+
+      expect(project).toBeTruthy();
+      // Should get the shorter path (/Users/test/my/app vs /Users/test/another/project)
+      expect(project?.actualPath).toBe('/Users/test/my/app');
     });
 
     it('should prefer exact directory name match over partial matches', async () => {
       // Set up projects that would cause the real-world issue
       const projects = [
-        '-Users-test-codetracker',
-        '-Users-test-codetracker-vespa-app',
+        {
+          encoded: '-Users-test-codetracker',
+          actual: '/Users/test/codetracker',
+        },
+        {
+          encoded: '-Users-test-codetracker-vespa-app',
+          actual: '/Users/test/codetracker/vespa_app',
+        },
       ];
 
       for (const project of projects) {
-        const projectDir = join(testClaudeDir, project);
-        await mkdir(projectDir);
-        await writeFile(join(projectDir, 'test.jsonl'), '{}');
+        const projectDir = join(testClaudeDir, project.encoded);
+        await createMockProject(projectDir, project.actual);
       }
 
       // This should find exact match for "codetracker" directory, not be ambiguous
       const project = await discovery.getProject('codetracker');
 
       expect(project).toBeTruthy();
-      expect(project?.name).toBe('/Users/test/codetracker'); // Exact match, not the vespa/app one
+      expect(project?.actualPath).toBe('/Users/test/codetracker'); // Exact match, not the vespa_app one
+      expect(project?.name).toBe('codetracker');
       expect(project?.encodedName).toBe('-Users-test-codetracker');
     });
   });

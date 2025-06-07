@@ -255,8 +255,9 @@ describe('StreamMerger', () => {
 
       const projects: ProjectInfo[] = [
         {
-          name: '/Users/test/project1',
-          path: '/home/.claude/projects/-Users-test-project1',
+          name: 'project1',
+          actualPath: '/Users/test/project1',
+          claudePath: '/home/.claude/projects/-Users-test-project1',
           encodedName: '-Users-test-project1',
           lastModified: new Date(),
         },
@@ -271,7 +272,7 @@ describe('StreamMerger', () => {
       expect(result[0].command).toBe('echo 1');
       expect(result[1].command).toBe('echo 2');
       expect(createResilientCommandStream).toHaveBeenCalledWith(
-        '/home/.claude/projects/-Users-test-project1'
+        projects[0].claudePath
       );
     });
 
@@ -321,14 +322,16 @@ describe('StreamMerger', () => {
 
       const projects: ProjectInfo[] = [
         {
-          name: '/Users/test/project1',
-          path: '/home/.claude/projects/-Users-test-project1',
+          name: 'project1',
+          actualPath: '/Users/test/project1',
+          claudePath: '/home/.claude/projects/-Users-test-project1',
           encodedName: '-Users-test-project1',
           lastModified: new Date(),
         },
         {
-          name: '/Users/test/project2',
-          path: '/home/.claude/projects/-Users-test-project2',
+          name: 'project2',
+          actualPath: '/Users/test/project2',
+          claudePath: '/home/.claude/projects/-Users-test-project2',
           encodedName: '-Users-test-project2',
           lastModified: new Date(),
         },

@@ -21,28 +21,24 @@ import type { CLIOptions, ClaudeCommand } from '../types.js';
 
 // Create properly typed mock instances
 type MockedProjectDiscovery = {
-  getAllProjects: ReturnType<typeof vi.fn<[], Promise<ProjectInfo[]>>>;
-  getProject: ReturnType<typeof vi.fn<[string], Promise<ProjectInfo | null>>>;
-  getCurrentProject?: ReturnType<typeof vi.fn<[], Promise<ProjectInfo | null>>>;
+  getAllProjects: ReturnType<typeof vi.fn>;
+  getProject: ReturnType<typeof vi.fn>;
+  getCurrentProject?: ReturnType<typeof vi.fn>;
 };
 
 type MockedOutputFormatter = {
-  formatProjectList: ReturnType<typeof vi.fn<[ProjectInfo[]], string>>;
-  formatCommandLine: ReturnType<
-    typeof vi.fn<[ClaudeCommand, number, boolean], string>
-  >;
-  writeLineWithSigpipeCheck: ReturnType<typeof vi.fn<[string], boolean>>;
+  formatProjectList: ReturnType<typeof vi.fn>;
+  formatCommandLine: ReturnType<typeof vi.fn>;
+  writeLineWithSigpipeCheck: ReturnType<typeof vi.fn>;
 };
 
 type MockedStreamMerger = {
-  mergeProjectStreams: ReturnType<
-    typeof vi.fn<[ProjectInfo[]], AsyncGenerator<ClaudeCommand>>
-  >;
+  mergeProjectStreams: ReturnType<typeof vi.fn>;
 };
 
 // Mock console methods
 const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
-const mockConsoleError = vi
+const _mockConsoleError = vi
   .spyOn(console, 'error')
   .mockImplementation(() => {});
 const _mockProcessExit = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -58,8 +54,9 @@ describe('CLI Functions', () => {
     it('should list projects and log formatted output', async () => {
       const mockProjects = [
         {
-          name: '/Users/test/project1',
-          path: '/home/.claude/projects/-Users-test-project1',
+          name: 'project1',
+          actualPath: '/Users/test/project1',
+          claudePath: '/home/.claude/projects/-Users-test-project1',
           encodedName: '-Users-test-project1',
           lastModified: new Date(),
         },
@@ -97,8 +94,9 @@ describe('CLI Functions', () => {
     it('should return global stream when --global is set', async () => {
       const mockProjects = [
         {
-          name: '/Users/test/project1',
-          path: '/home/.claude/projects/-Users-test-project1',
+          name: 'project1',
+          actualPath: '/Users/test/project1',
+          claudePath: '/home/.claude/projects/-Users-test-project1',
           encodedName: '-Users-test-project1',
           lastModified: new Date(),
         },
@@ -139,8 +137,9 @@ describe('CLI Functions', () => {
 
     it('should return single project stream when project is found', async () => {
       const mockProject = {
-        name: '/Users/test/project1',
-        path: '/home/.claude/projects/-Users-test-project1',
+        name: 'project1',
+        actualPath: '/Users/test/project1',
+        claudePath: '/home/.claude/projects/-Users-test-project1',
         encodedName: '-Users-test-project1',
         lastModified: new Date(),
       };
@@ -169,7 +168,7 @@ describe('CLI Functions', () => {
 
       expect(mockDiscovery.getProject).toHaveBeenCalledWith(projectName);
       expect(createResilientCommandStream).toHaveBeenCalledWith(
-        mockProject.path
+        mockProject.claudePath
       );
       expect(result.isGlobal).toBe(false);
     });
@@ -177,8 +176,9 @@ describe('CLI Functions', () => {
     it('should fall back to global mode when no project found', async () => {
       const mockProjects = [
         {
-          name: '/Users/test/project1',
-          path: '/home/.claude/projects/-Users-test-project1',
+          name: 'project1',
+          actualPath: '/Users/test/project1',
+          claudePath: '/home/.claude/projects/-Users-test-project1',
           encodedName: '-Users-test-project1',
           lastModified: new Date(),
         },
@@ -210,17 +210,9 @@ describe('CLI Functions', () => {
       const projectName = 'nonexistent';
       const options: CLIOptions = {};
 
-      const result = await createCommandStream(projectName, options);
-
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        'No project found. Showing global history from all projects.',
-        { file: 'stderr' }
+      await expect(createCommandStream(projectName, options)).rejects.toThrow(
+        "Project 'nonexistent' not found"
       );
-      expect(mockDiscovery.getAllProjects).toHaveBeenCalled();
-      expect(mockStreamMerger.mergeProjectStreams).toHaveBeenCalledWith(
-        mockProjects
-      );
-      expect(result.isGlobal).toBe(true);
     });
   });
 

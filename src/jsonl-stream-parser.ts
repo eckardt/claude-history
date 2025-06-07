@@ -175,6 +175,70 @@ export class JSONLStreamParser {
       .filter((line) => line.length > 0)
       .join('\\n');
   }
+
+  /**
+   * Extract project root path from the first few lines of a project's JSONL files
+   * Returns the first valid cwd found, or null if none found
+   */
+  async extractProjectRoot(projectPath: string): Promise<string | null> {
+    try {
+      const files = await readdir(projectPath);
+      const jsonlFiles = files.filter((file) => file.endsWith('.jsonl'));
+
+      // Try each JSONL file until we find a cwd
+      for (const file of jsonlFiles) {
+        const filePath = join(projectPath, file);
+        try {
+          const cwd = await this.extractCwdFromFile(filePath);
+          if (cwd) return cwd;
+        } catch {
+          // Skip corrupted files and continue
+        }
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Extract cwd from first few lines of a single JSONL file
+   */
+  private async extractCwdFromFile(
+    filePath: string,
+    maxLines = 10
+  ): Promise<string | null> {
+    const fileStream = createReadStream(filePath);
+    const rl = createInterface({
+      input: fileStream,
+      crlfDelay: Number.POSITIVE_INFINITY,
+    });
+
+    let lineCount = 0;
+
+    try {
+      for await (const line of rl) {
+        if (++lineCount > maxLines) break;
+
+        try {
+          const entry = JSON.parse(line) as ConversationEntry;
+          if (entry.cwd) {
+            rl.close();
+            fileStream.close();
+            return entry.cwd;
+          }
+        } catch {
+          // Skip malformed JSON lines
+        }
+      }
+    } finally {
+      rl.close();
+      fileStream.close();
+    }
+
+    return null;
+  }
 }
 
 /**

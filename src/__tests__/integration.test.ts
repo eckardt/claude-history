@@ -50,6 +50,7 @@ describe('Integration Tests', () => {
 
   async function createTestProject(
     projectName: string,
+    actualPath: string,
     sessions: Array<{ filename: string; commands: unknown[] }>
   ) {
     const projectDir = join(testClaudeDir, projectName);
@@ -57,7 +58,27 @@ describe('Integration Tests', () => {
 
     for (const session of sessions) {
       const sessionPath = join(projectDir, session.filename);
-      const jsonlContent = session.commands
+
+      // Add a base entry with cwd field if commands array is empty or doesn't have cwd
+      const baseEntry = {
+        cwd: actualPath,
+        type: 'user',
+        message: { role: 'user', content: [] },
+        timestamp: new Date().toISOString(),
+      };
+
+      const allCommands =
+        session.commands.length === 0 ? [baseEntry] : [...session.commands];
+
+      // Ensure each command has a cwd field
+      const commandsWithCwd = allCommands.map((cmd) => {
+        if (typeof cmd === 'object' && cmd !== null && !('cwd' in cmd)) {
+          return { ...cmd, cwd: actualPath };
+        }
+        return cmd;
+      });
+
+      const jsonlContent = commandsWithCwd
         .map((cmd) => JSON.stringify(cmd))
         .join('\n');
       await writeFile(sessionPath, jsonlContent);
@@ -113,10 +134,10 @@ describe('Integration Tests', () => {
     });
 
     it('should list projects when run with --list-projects', async () => {
-      await createTestProject('-Users-test-project1', [
+      await createTestProject('-Users-test-project1', '/Users/test/project1', [
         { filename: 'session1.jsonl', commands: [] },
       ]);
-      await createTestProject('-Users-test-project2', [
+      await createTestProject('-Users-test-project2', '/Users/test/project2', [
         { filename: 'session2.jsonl', commands: [] },
       ]);
 
@@ -154,7 +175,7 @@ describe('Integration Tests', () => {
         cwd: '/Users/test/project1',
       };
 
-      await createTestProject('-Users-test-project1', [
+      await createTestProject('-Users-test-project1', '/Users/test/project1', [
         { filename: 'session1.jsonl', commands: [bashCommand] },
       ]);
 
@@ -176,7 +197,7 @@ describe('Integration Tests', () => {
         cwd: '/Users/test/project1',
       };
 
-      await createTestProject('-Users-test-project1', [
+      await createTestProject('-Users-test-project1', '/Users/test/project1', [
         { filename: 'session1.jsonl', commands: [userCommand] },
       ]);
 
@@ -203,7 +224,7 @@ describe('Integration Tests', () => {
         timestamp: `2025-06-07T12:0${i}:00.000Z`,
       }));
 
-      await createTestProject('-Users-test-project1', [
+      await createTestProject('-Users-test-project1', '/Users/test/project1', [
         { filename: 'session1.jsonl', commands },
       ]);
 
@@ -267,10 +288,10 @@ describe('Integration Tests', () => {
         },
       ];
 
-      await createTestProject('-Users-test-project1', [
+      await createTestProject('-Users-test-project1', '/Users/test/project1', [
         { filename: 'session1.jsonl', commands: project1Commands },
       ]);
-      await createTestProject('-Users-test-project2', [
+      await createTestProject('-Users-test-project2', '/Users/test/project2', [
         { filename: 'session1.jsonl', commands: project2Commands },
       ]);
 
@@ -302,9 +323,11 @@ describe('Integration Tests', () => {
         },
       ];
 
-      await createTestProject('-Users-test-myproject', [
-        { filename: 'session1.jsonl', commands },
-      ]);
+      await createTestProject(
+        '-Users-test-myproject',
+        '/Users/test/myproject',
+        [{ filename: 'session1.jsonl', commands }]
+      );
 
       const result = await runCLI(['myproject']);
 
@@ -351,23 +374,17 @@ describe('Integration Tests', () => {
       ];
 
       // Create two projects with commands so global mode shows project prefixes
-      await createTestProject('-Users-test-existing', [
+      await createTestProject('-Users-test-existing', '/Users/test/existing', [
         { filename: 'session1.jsonl', commands: existingCommands },
       ]);
-      await createTestProject('-Users-test-another', [
+      await createTestProject('-Users-test-another', '/Users/test/another', [
         { filename: 'session1.jsonl', commands: anotherCommands },
       ]);
 
       const result = await runCLI(['nonexistent']);
 
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('echo from existing');
-      expect(result.stdout).toContain('echo from another');
-      expect(result.stdout).toContain('[existing'); // Global mode with project prefix
-      expect(result.stdout).toContain('[another'); // Global mode with project prefix
-      expect(result.stderr).toContain(
-        'No project found. Showing global history'
-      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("Project 'nonexistent' not found");
     });
 
     it('should handle corrupted JSONL gracefully', async () => {
@@ -384,6 +401,7 @@ describe('Integration Tests', () => {
           ],
         },
         timestamp: '2025-06-07T12:00:00.000Z',
+        cwd: '/Users/test/project1',
       };
 
       const sessionContent = [
@@ -407,7 +425,7 @@ describe('Integration Tests', () => {
 
     it('should exit with code 2 when no commands found', async () => {
       // Create empty project
-      await createTestProject('-Users-test-empty', [
+      await createTestProject('-Users-test-empty', '/Users/test/empty', [
         { filename: 'session1.jsonl', commands: [] },
       ]);
 
