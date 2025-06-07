@@ -16,43 +16,77 @@ export class JSONLStreamParser {
         crlfDelay: Number.POSITIVE_INFINITY,
       });
 
-      let lineNumber = 0;
-
       try {
-        for await (const line of rl) {
-          lineNumber++;
-
-          if (!line.trim()) continue;
-
-          try {
-            const entry: ConversationEntry = JSON.parse(line);
-
-            // Extract bash commands from assistant messages
-            const bashCommand = this.extractBashCommand(entry);
-            if (bashCommand) {
-              yield bashCommand;
-            }
-
-            // Extract user commands starting with "!"
-            const userCommand = this.extractUserCommand(entry);
-            if (userCommand) {
-              yield userCommand;
-            }
-          } catch (error) {
-            // Log error to stderr but continue processing
-            const errorType =
-              error instanceof SyntaxError ? 'JSON syntax' : 'parsing';
-            console.error(
-              `Error parsing line ${lineNumber} in ${filePath}: ${errorType} error`
-            );
-          }
-        }
+        yield* this.processLines(rl, filePath);
       } finally {
         rl.close();
       }
     } catch (error) {
       console.error(
         `Error reading file ${filePath}: ${(error as Error).message}`
+      );
+    }
+  }
+
+  /**
+   * Process lines from a readline interface
+   */
+  private async *processLines(
+    rl: ReturnType<typeof createInterface>,
+    filePath: string
+  ): AsyncGenerator<ClaudeCommand> {
+    let lineNumber = 0;
+
+    for await (const line of rl) {
+      lineNumber++;
+      const lineStr = line.toString();
+
+      if (!lineStr.trim()) continue;
+
+      // Pre-filter: Skip lines that can't contain bash commands or user commands
+      if (!this.lineContainsCommands(lineStr)) {
+        continue;
+      }
+
+      yield* this.processLine(lineStr, lineNumber, filePath);
+    }
+  }
+
+  /**
+   * Check if a line could contain commands
+   */
+  private lineContainsCommands(line: string): boolean {
+    return line.includes('"Bash"') || line.includes('! ');
+  }
+
+  /**
+   * Process a single line and extract commands
+   */
+  private async *processLine(
+    line: string,
+    lineNumber: number,
+    filePath: string
+  ): AsyncGenerator<ClaudeCommand> {
+    try {
+      const entry: ConversationEntry = JSON.parse(line);
+
+      // Extract bash commands from assistant messages
+      const bashCommand = this.extractBashCommand(entry);
+      if (bashCommand) {
+        yield bashCommand;
+      }
+
+      // Extract user commands starting with "!"
+      const userCommand = this.extractUserCommand(entry);
+      if (userCommand) {
+        yield userCommand;
+      }
+    } catch (error) {
+      // Log error to stderr but continue processing
+      const errorType =
+        error instanceof SyntaxError ? 'JSON syntax' : 'parsing';
+      console.error(
+        `Error parsing line ${lineNumber} in ${filePath}: ${errorType} error`
       );
     }
   }
