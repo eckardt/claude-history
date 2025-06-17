@@ -80,7 +80,6 @@ Extracts commands from:
 cchistory [project-name]     # Show history for specific project (by name or path)
 cchistory --global          # Show history from all projects  
 cchistory --list-projects   # List all available Claude projects
-cchistory --count N         # Show last N commands
 cchistory --help            # Show usage info
 ```
 

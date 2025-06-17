@@ -90,10 +90,6 @@ export async function processCommandStream(
       continue;
     }
 
-    if (options.count && commandCount >= options.count) {
-      break;
-    }
-
     const line = formatter.formatCommandLine(command, index, isGlobal);
     const shouldContinue = formatter.writeLineWithSigpipeCheck(line);
 
@@ -138,13 +134,6 @@ program
   .argument('[project]', 'project name or path (default: current directory)')
   .option('-g, --global', 'show history from all projects chronologically')
   .option('-l, --list-projects', 'list all available Claude projects')
-  .option('-c, --count <n>', 'show last N commands', (value) => {
-    const parsed = Number.parseInt(value, 10);
-    if (Number.isNaN(parsed) || parsed <= 0) {
-      throw new Error('Count must be a positive number');
-    }
-    return parsed;
-  })
   .option(
     '--include-failed',
     'include failed command executions (default: only successful)'

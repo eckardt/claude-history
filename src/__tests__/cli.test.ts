@@ -316,51 +316,6 @@ describe('CLI Functions', () => {
       );
     });
 
-    it('should respect count limit', async () => {
-      const mockCommands: ClaudeCommand[] = [
-        {
-          timestamp: new Date('2025-06-07T12:00:00.000Z'),
-          command: 'npm install',
-          source: 'bash',
-        },
-        {
-          timestamp: new Date('2025-06-07T12:01:00.000Z'),
-          command: 'npm test',
-          source: 'bash',
-        },
-        {
-          timestamp: new Date('2025-06-07T12:02:00.000Z'),
-          command: 'npm build',
-          source: 'bash',
-        },
-      ];
-
-      const mockStream = (async function* () {
-        for (const command of mockCommands) {
-          yield command;
-        }
-      })();
-
-      const mockFormatter = {
-        formatCommandLine: vi
-          .fn()
-          .mockReturnValueOnce('   1  npm install')
-          .mockReturnValueOnce('   2  npm test'),
-        writeLineWithSigpipeCheck: vi.fn().mockReturnValue(true),
-      };
-
-      vi.mocked(OutputFormatter).mockImplementation(
-        () => mockFormatter as MockedOutputFormatter
-      );
-
-      const options: CLIOptions = { count: 2 };
-      const isGlobal = false;
-
-      await processCommandStream(mockStream, options, isGlobal);
-
-      expect(mockFormatter.formatCommandLine).toHaveBeenCalledTimes(2);
-    });
-
     it('should stop processing when SIGPIPE is detected', async () => {
       const mockCommands: ClaudeCommand[] = [
         {

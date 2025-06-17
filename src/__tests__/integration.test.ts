@@ -118,7 +118,6 @@ describe('Integration Tests', () => {
       );
       expect(result.stdout).toContain('--global');
       expect(result.stdout).toContain('--list-projects');
-      expect(result.stdout).toContain('--count');
       expect(result.stdout).toContain('--include-failed');
     });
 
@@ -202,37 +201,6 @@ describe('Integration Tests', () => {
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('git status');
       expect(result.stdout).toContain('[project1');
-    });
-
-    it('should respect count limit', async () => {
-      const commands = Array.from({ length: 5 }, (_, i) => ({
-        type: 'assistant',
-        message: {
-          role: 'assistant',
-          content: [
-            {
-              type: 'tool_use',
-              name: 'Bash',
-              input: { command: `echo ${i + 1}` },
-            },
-          ],
-        },
-        timestamp: `2025-06-07T12:0${i}:00.000Z`,
-      }));
-
-      await createTestProject('-Users-test-project1', '/Users/test/project1', [
-        { filename: 'session1.jsonl', commands },
-      ]);
-
-      const result = await runCLI(['--global', '--count', '3']);
-
-      expect(result.exitCode).toBe(0);
-      const lines = result.stdout.trim().split('\n');
-      expect(lines).toHaveLength(3);
-      expect(result.stdout).toContain('echo 1');
-      expect(result.stdout).toContain('echo 2');
-      expect(result.stdout).toContain('echo 3');
-      expect(result.stdout).not.toContain('echo 4');
     });
 
     it('should merge multiple projects chronologically', async () => {
@@ -429,13 +397,6 @@ describe('Integration Tests', () => {
 
       expect(result.exitCode).toBe(2);
       expect(result.stdout).toBe('');
-    });
-
-    it('should handle invalid count parameter', async () => {
-      const result = await runCLI(['--global', '--count', 'invalid']);
-
-      expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain('Count must be a positive number');
     });
   });
 });

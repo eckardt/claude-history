@@ -29,6 +29,5 @@ export interface ConversationEntry {
 export interface CLIOptions {
   global?: boolean;
   listProjects?: boolean;
-  count?: number;
   includeFailed?: boolean;
 }
