@@ -1,25 +1,45 @@
 # cchistory
 
-Get shell commands from Claude Code conversation history. Because commands Claude runs via the Bash tool don't appear in your shell history.
+[![npm version](https://badge.fury.io/js/cchistory.svg)](https://badge.fury.io/js/cchistory)
+
+Like the shell `history` command but for your Claude Code sessions.
+
+## Why cchistory?
+
+When Claude Code runs shell commands, they don't appear in your shell history. This makes it hard to:
+- Re-run useful commands from past sessions
+- Build on previous work
+- Learn from command patterns Claude uses
+- Copy command sequences for documentation
 
 ```bash
-$ cchistory --global | tail -5
-  47  [api-server     ] git pull origin main
-  48  [api-server     ] git log --oneline -5
-  49  [api-server     ] docker-compose up -d
-  50  [api-server     ] curl -I localhost:8080/health
-  51  [frontend       ] git status
+$ cchistory | tail -5
+  46  git status
+  47  git pull origin main
+  48  git log --oneline -5
+  49  docker-compose up -d
+  50  curl -I localhost:8080/health
 ```
 
-## Install
+## 📦 Installation
 
+### npm (recommended)
 ```bash
 npm install -g cchistory
 ```
 
-Or use `npx` to try without installing:
+### npx (try without installing)
 ```bash
-npx cchistory
+npx cchistory --help
+```
+
+### From source
+```bash
+git clone https://github.com/eckardt/cchistory
+cd cchistory
+npm install
+npm run build
+npm link
 ```
 
 ## Usage
@@ -34,12 +54,13 @@ cchistory my-app | tail -10  # Last 10 from specific project
 cchistory ~/code/my-app      # Project by full path
 ```
 
-## What It Does
+## ✨ Features
 
-- Find commands Claude executed via the Bash tool across all your projects
-- Search command history with standard Unix tools (`grep`, `awk`, etc.)
-- Copy command sequences from past sessions
-- See which project each command came from
+- 🔍 Extract all Bash commands Claude executed across projects
+- 🗂️ Filter by specific project or search globally  
+- 📊 Standard Unix tool compatibility (`grep`, `awk`, `sort`)
+- ⚡ Fast streaming parser for large conversation logs
+- 🚀 Zero-config - works with existing Claude Code setup
 
 ## How It Works
 
@@ -49,6 +70,22 @@ Claude Code stores conversation history in `~/.claude/projects/`. This tool:
 2. Streams through conversation logs  
 3. Extracts shell commands Claude executed
 4. Formats them like traditional shell history
+
+## 📋 Example Output
+
+```bash
+$ cchistory --global | head -10
+   1  [web-scraper    ] npm install puppeteer
+   2  [web-scraper    ] mkdir src tests
+   3  [api-project    ] docker-compose up -d
+   4  [api-project    ] curl -X POST localhost:3000/api/test
+   5  [frontend       ] npm run dev
+   6  [frontend       ] git add .
+   7  [backend        ] npm test
+   8  [backend        ] git commit -m "fix: validation"
+   9  [deployment     ] kubectl apply -f deployment.yaml
+  10  [deployment     ] kubectl get pods
+```
 
 ## Advanced Usage
 
@@ -71,13 +108,15 @@ Extracts commands from:
 
 ## Requirements
 
-- Node.js 18+ 
+- Node.js 20+ 
 - Claude Code with conversation history in `~/.claude/projects/`
+
+**Note**: Claude Code automatically cleans up conversation transcripts based on the `cleanupPeriodDays` setting (default: 30 days). Commands older than this period won't appear in cchistory output. You can adjust this retention period in [Claude Code's settings](https://docs.anthropic.com/en/docs/claude-code/settings) if needed.
 
 ## Options
 
 ```
-cchistory [project-name]     # Show history for specific project (by name or path)
+cchistory [project-name]    # Show history for specific project (by name or path)
 cchistory --global          # Show history from all projects  
 cchistory --list-projects   # List all available Claude projects
 cchistory --help            # Show usage info
