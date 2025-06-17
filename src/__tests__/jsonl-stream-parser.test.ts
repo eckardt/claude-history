@@ -11,7 +11,7 @@ describe('JSONLStreamParser', () => {
 
   beforeEach(async () => {
     parser = new JSONLStreamParser();
-    testDir = join(tmpdir(), `claude-history-test-${Date.now()}`);
+    testDir = join(tmpdir(), `cchistory-test-${Date.now()}`);
     await mkdir(testDir, { recursive: true });
   });
 

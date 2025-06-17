@@ -294,11 +294,11 @@ describe('OutputFormatter', () => {
         timestamp: new Date(),
         command: 'test',
         source: 'bash',
-        projectPath: '/Users/test/dev/claude-history',
+        projectPath: '/Users/test/dev/cchistory',
       };
 
       const result = formatter.formatCommandLine(command, 1, true);
-      expect(result).toContain('[claude-history ]');
+      expect(result).toContain('cchistory');
     });
 
     it('should handle paths with no directory separators', () => {

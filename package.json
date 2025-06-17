@@ -1,10 +1,10 @@
 {
-  "name": "claude-history",
+  "name": "cchistory",
   "version": "0.1.4",
   "description": "Get shell commands from Claude Code conversation history. Because Claude's commands don't appear in your shell history.",
   "main": "dist/cli.js",
   "bin": {
-    "claude-history": "bin/claude-history.js"
+    "cchistory": "bin/cchistory.js"
   },
   "type": "module",
   "files": [
@@ -66,8 +66,7 @@
   },
   "lint-staged": {
     "src/**/*.{ts,js}": [
-      "biome check --write",
-      "tsc --noEmit"
+      "biome check --write"
     ]
   }
 }

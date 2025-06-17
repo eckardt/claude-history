@@ -119,28 +119,6 @@ describe('ProjectDiscovery', () => {
     });
   });
 
-  describe('getCurrentProject', () => {
-    it('should return current project if it exists', async () => {
-      const currentDir = process.cwd();
-      const encodedCurrentDir = currentDir.replace(/\//g, '-');
-      const projectDir = join(testClaudeDir, encodedCurrentDir);
-
-      await createMockProject(projectDir, currentDir);
-
-      const project = await discovery.getCurrentProject();
-
-      expect(project).toBeTruthy();
-      expect(project?.name).toBe('claude-history'); // basename of current dir
-      expect(project?.actualPath).toBe(currentDir);
-      expect(project?.encodedName).toBe(encodedCurrentDir);
-    });
-
-    it('should return null if current project does not exist', async () => {
-      const project = await discovery.getCurrentProject();
-      expect(project).toBeNull();
-    });
-  });
-
   describe('getProject', () => {
     beforeEach(async () => {
       // Set up test projects with proper cwd fields

@@ -31,7 +31,7 @@ describe('Integration Tests', () => {
     };
 
     // Create temporary test environment
-    testHomeDir = join(tmpdir(), `claude-history-integration-${Date.now()}`);
+    testHomeDir = join(tmpdir(), `cchistory-integration-${Date.now()}`);
     testClaudeDir = join(testHomeDir, '.claude', 'projects');
     await mkdir(testClaudeDir, { recursive: true });
 
@@ -89,14 +89,10 @@ describe('Integration Tests', () => {
     args: string[]
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     try {
-      const result = await execFile(
-        'node',
-        ['bin/claude-history.js', ...args],
-        {
-          cwd: process.cwd(),
-          env: { ...process.env, HOME: testHomeDir },
-        }
-      );
+      const result = await execFile('node', ['bin/cchistory.js', ...args], {
+        cwd: process.cwd(),
+        env: { ...process.env, HOME: testHomeDir },
+      });
       return {
         stdout: result.stdout,
         stderr: result.stderr,

@@ -132,7 +132,7 @@ async function main(
 
 // Set up CLI with Commander.js
 program
-  .name('claude-history')
+  .name('cchistory')
   .description('Show shell command history from Claude Code conversation logs')
   .version(version)
   .argument('[project]', 'project name or path (default: current directory)')

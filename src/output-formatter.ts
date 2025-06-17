@@ -93,7 +93,7 @@ export class OutputFormatter {
   /**
    * Extract a short project name from full path
    * /Users/test/dev/codetracker -> codetracker
-   * /Users/test/dev/claude-history -> claude-history
+   * /Users/test/dev/cchistory -> cchistory
    */
   private extractProjectName(projectPath: string): string {
     // Should only receive decoded paths like "/Users/test/dev/codetracker"

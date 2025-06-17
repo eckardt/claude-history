@@ -1,9 +1,9 @@
-# claude-history
+# cchistory
 
 Get shell commands from Claude Code conversation history. Because commands Claude runs via the Bash tool don't appear in your shell history.
 
 ```bash
-$ claude-history --global | tail -5
+$ cchistory --global | tail -5
   47  [api-server     ] git pull origin main
   48  [api-server     ] git log --oneline -5
   49  [api-server     ] docker-compose up -d
@@ -14,24 +14,24 @@ $ claude-history --global | tail -5
 ## Install
 
 ```bash
-npm install -g claude-history
+npm install -g cchistory
 ```
 
 Or use `npx` to try without installing:
 ```bash
-npx claude-history
+npx cchistory
 ```
 
 ## Usage
 
 ```bash
-claude-history                    # Current project history
-claude-history --global           # All projects
-claude-history --list-projects    # See all available projects
-claude-history | grep docker      # Find Docker commands  
-claude-history | tail -5          # Last 5 commands
-claude-history my-app | tail -10  # Last 10 from specific project
-claude-history ~/code/my-app      # Project by full path
+cchistory                    # Current project history
+cchistory --global           # All projects
+cchistory --list-projects    # See all available projects
+cchistory | grep docker      # Find Docker commands  
+cchistory | tail -5          # Last 5 commands
+cchistory my-app | tail -10  # Last 10 from specific project
+cchistory ~/code/my-app      # Project by full path
 ```
 
 ## What It Does
@@ -54,13 +54,13 @@ Claude Code stores conversation history in `~/.claude/projects/`. This tool:
 
 ```bash
 # Find all npm commands across projects
-claude-history --global | grep npm
+cchistory --global | grep npm
 
 # Get last 20 Docker commands
-claude-history --global | grep docker | tail -20
+cchistory --global | grep docker | tail -20
 
 # Count commands by type
-claude-history --global | sed 's/.*] //' | awk '{print $1}' | sort | uniq -c | sort -nr | head -10
+cchistory --global | sed 's/.*] //' | awk '{print $1}' | sort | uniq -c | sort -nr | head -10
 ```
 
 ## Command Sources
@@ -77,11 +77,11 @@ Extracts commands from:
 ## Options
 
 ```
-claude-history [project-name]     # Show history for specific project (by name or path)
-claude-history --global          # Show history from all projects  
-claude-history --list-projects   # List all available Claude projects
-claude-history --count N         # Show last N commands
-claude-history --help            # Show usage info
+cchistory [project-name]     # Show history for specific project (by name or path)
+cchistory --global          # Show history from all projects  
+cchistory --list-projects   # List all available Claude projects
+cchistory --count N         # Show last N commands
+cchistory --help            # Show usage info
 ```
 
 ## Output Format
@@ -99,7 +99,7 @@ Multi-line commands use zsh history format with `\\n` for newlines.
 
 ## Unix Philosophy
 
-`claude-history` does one thing well: extract shell commands. Use it with standard Unix tools:
+`cchistory` does one thing well: extract shell commands. Use it with standard Unix tools:
 
 - `grep` for filtering
 - `head`/`tail` for limiting output  
