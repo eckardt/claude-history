@@ -33,6 +33,7 @@
     "test:coverage": "vitest --coverage",
     "test:coverage:ui": "vitest --coverage --ui",
     "preversion": "npm run check && npm run test:coverage -- --run && npm run build",
+    "version": "node scripts/update-version.js && git add -A src/version.ts",
     "prepublishOnly": "npm run typecheck && npm run check && npm run test && npm run build",
     "release:patch": "npm version patch && git push && git push --tags",
     "release:minor": "npm version minor && git push && git push --tags",
