@@ -186,7 +186,7 @@ describe('Integration Tests', () => {
         type: 'user',
         message: {
           role: 'user',
-          content: [{ type: 'text', text: '! git status' }],
+          content: '<bash-input>git status</bash-input>',
         },
         timestamp: '2025-06-07T12:01:00.000Z',
         cwd: '/Users/test/project1',

@@ -89,17 +89,12 @@ describe('JSONLStreamParser', () => {
   });
 
   describe('extractUserCommand', () => {
-    it('should extract user command starting with "!"', () => {
+    it('should extract user command from <bash-input> tags', () => {
       const entry: ConversationEntry = {
         type: 'user',
         message: {
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: '! npm test',
-            },
-          ],
+          content: '<bash-input>npm test</bash-input>',
         },
         timestamp: '2025-06-07T12:00:00.000Z',
         cwd: '/Users/test/project',
@@ -191,7 +186,7 @@ describe('JSONLStreamParser', () => {
           type: 'user',
           message: {
             role: 'user',
-            content: [{ type: 'text', text: '! echo "test2"' }],
+            content: '<bash-input>echo "test2"</bash-input>',
           },
           timestamp: '2025-06-07T12:01:00.000Z',
         },
@@ -234,7 +229,7 @@ describe('JSONLStreamParser', () => {
           type: 'user',
           message: {
             role: 'user',
-            content: [{ type: 'text', text: '! echo "valid2"' }],
+            content: '<bash-input>echo "valid2"</bash-input>',
           },
         }),
       ].join('\n');

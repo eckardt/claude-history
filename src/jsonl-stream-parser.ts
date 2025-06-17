@@ -2,9 +2,16 @@ import { createReadStream } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import type { ClaudeCommand, ConversationEntry } from './types.js';
+import type {
+  AssistantConversationEntry,
+  ClaudeCommand,
+  ConversationEntry,
+} from './types.js';
 
 export class JSONLStreamParser {
+  private pendingCommands = new Map<string, ClaudeCommand>();
+  private maxPendingEntries = 100; // Cleanup threshold
+
   /**
    * Create resilient streaming parser for single JSONL file
    */
@@ -18,6 +25,9 @@ export class JSONLStreamParser {
 
       try {
         yield* this.processLines(rl, filePath);
+
+        // Yield any remaining pending commands at end of file
+        yield* this.flushPendingCommands();
       } finally {
         rl.close();
       }
@@ -36,9 +46,11 @@ export class JSONLStreamParser {
     filePath: string
   ): AsyncGenerator<ClaudeCommand> {
     let lineNumber = 0;
+    let entryCount = 0;
 
     for await (const line of rl) {
       lineNumber++;
+      entryCount++;
       const lineStr = line.toString();
 
       if (!lineStr.trim()) continue;
@@ -48,21 +60,30 @@ export class JSONLStreamParser {
         continue;
       }
 
-      yield* this.processLine(lineStr, lineNumber, filePath);
+      yield* this.processEntry(lineStr, lineNumber, filePath);
+
+      // Periodic cleanup of old pending commands
+      if (entryCount % this.maxPendingEntries === 0) {
+        yield* this.cleanupOldPendingCommands();
+      }
     }
   }
 
   /**
-   * Check if a line could contain commands
+   * Check if a line could contain commands or tool results
    */
   private lineContainsCommands(line: string): boolean {
-    return line.includes('"Bash"') || line.includes('! ');
+    return (
+      line.includes('"Bash"') ||
+      line.includes('"tool_result"') ||
+      line.includes('<bash-input>')
+    );
   }
 
   /**
-   * Process a single line and extract commands
+   * Process a single entry and handle tool use matching
    */
-  private async *processLine(
+  private async *processEntry(
     line: string,
     lineNumber: number,
     filePath: string
@@ -70,15 +91,35 @@ export class JSONLStreamParser {
     try {
       const entry: ConversationEntry = JSON.parse(line);
 
-      // Extract bash commands from assistant messages
+      // Handle bash tool use (store pending)
       const bashCommand = this.extractBashCommand(entry);
       if (bashCommand) {
-        yield bashCommand;
+        const toolUseId = this.extractToolUseId(entry);
+        if (toolUseId) {
+          this.pendingCommands.set(toolUseId, bashCommand);
+        } else {
+          // No tool use ID, assume success and yield immediately
+          bashCommand.success = true;
+          yield bashCommand;
+        }
       }
 
-      // Extract user commands starting with "!"
+      // Handle tool result (match with pending)
+      const toolResult = this.extractToolResult(entry);
+      if (toolResult) {
+        const command = this.pendingCommands.get(toolResult.tool_use_id);
+        if (command) {
+          command.success = !toolResult.is_error;
+          this.pendingCommands.delete(toolResult.tool_use_id);
+          yield command;
+        } else {
+        }
+      }
+
+      // Handle user commands starting with "!" (yield immediately)
       const userCommand = this.extractUserCommand(entry);
       if (userCommand) {
+        userCommand.success = true; // User commands are always considered successful
         yield userCommand;
       }
     } catch (error) {
@@ -140,10 +181,66 @@ export class JSONLStreamParser {
   /**
    * Find the first Bash tool use block in content
    */
-  private findBashToolBlock(content: ConversationEntry['message']['content']) {
+  private findBashToolBlock(
+    content: AssistantConversationEntry['message']['content']
+  ) {
     return content.find(
       (block) => block.type === 'tool_use' && block.name === 'Bash'
     );
+  }
+
+  /**
+   * Extract tool use ID from assistant message containing Bash tool use
+   */
+  private extractToolUseId(entry: ConversationEntry): string | null {
+    if (entry.type !== 'assistant' || !entry.message?.content) return null;
+
+    const bashBlock = this.findBashToolBlock(entry.message.content);
+    return bashBlock?.id || null;
+  }
+
+  /**
+   * Extract tool result from user message
+   */
+  private extractToolResult(
+    entry: ConversationEntry
+  ): { tool_use_id: string; is_error: boolean } | null {
+    if (entry.type !== 'user' || !entry.message?.content) return null;
+    if (typeof entry.message.content === 'string') return null; // Tool results are in array format
+
+    const toolResult = entry.message.content.find(
+      (block) => block.type === 'tool_result' && block.tool_use_id
+    );
+
+    if (toolResult?.tool_use_id) {
+      return {
+        tool_use_id: toolResult.tool_use_id,
+        is_error: toolResult.is_error ?? false,
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Flush all pending commands (assume success)
+   */
+  private *flushPendingCommands(): Generator<ClaudeCommand> {
+    for (const command of this.pendingCommands.values()) {
+      command.success = true; // Default to success for orphaned commands
+      yield command;
+    }
+    this.pendingCommands.clear();
+  }
+
+  /**
+   * Clean up old pending commands that haven't been matched
+   */
+  private *cleanupOldPendingCommands(): Generator<ClaudeCommand> {
+    // For now, just flush if we have too many pending
+    if (this.pendingCommands.size > this.maxPendingEntries) {
+      yield* this.flushPendingCommands();
+    }
   }
 
   /**
@@ -171,10 +268,11 @@ export class JSONLStreamParser {
   }
 
   /**
-   * Extract user command starting with "!"
+   * Extract user command from <bash-input> tags
    */
   extractUserCommand(entry: ConversationEntry): ClaudeCommand | null {
     if (entry.type !== 'user' || !entry.message?.content) return null;
+    if (typeof entry.message.content !== 'string') return null; // User commands are in string format
 
     const command = this.findUserCommand(entry.message.content);
     if (!command) return null;
@@ -183,19 +281,14 @@ export class JSONLStreamParser {
   }
 
   /**
-   * Find user command from text blocks starting with "!"
+   * Find user command from <bash-input> tags
    */
-  private findUserCommand(
-    content: ConversationEntry['message']['content']
-  ): string | null {
-    for (const block of content) {
-      if (block.type === 'text' && block.text) {
-        const trimmed = block.text.trim();
-        if (trimmed.startsWith('! ')) {
-          return trimmed.substring(2).trim();
-        }
-      }
+  private findUserCommand(content: string): string | null {
+    const bashInputMatch = content.match(/<bash-input>(.*?)<\/bash-input>/);
+    if (bashInputMatch) {
+      return bashInputMatch[1].trim();
     }
+
     return null;
   }
 
