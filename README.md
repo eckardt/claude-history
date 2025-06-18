@@ -4,6 +4,10 @@
 
 Like the shell `history` command but for your Claude Code sessions.
 
+<div>
+  <img src="https://github.com/eckardt/cchistory/blob/main/docs/demo.gif?raw=true">
+</div>
+
 ## Why cchistory?
 
 When Claude Code runs shell commands, they don't appear in your shell history. This makes it hard to:
