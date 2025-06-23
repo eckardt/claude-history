@@ -1,6 +1,6 @@
 import {
-  JSONLStreamParser,
   createResilientCommandStream,
+  JSONLStreamParser,
 } from './jsonl-stream-parser.js';
 import type { ClaudeCommand } from './types.js';
 
