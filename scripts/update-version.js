@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
 
 // Read version from package.json
-const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf-8'));
+const packageJson = JSON.parse(
+  readFileSync(join(projectRoot, 'package.json'), 'utf-8')
+);
 const version = packageJson.version;
 
 // Update version.ts file

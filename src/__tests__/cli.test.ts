@@ -15,7 +15,6 @@ import {
 import { createResilientCommandStream } from '../jsonl-stream-parser.js';
 import { OutputFormatter } from '../output-formatter.js';
 import { ProjectDiscovery } from '../project-discovery.js';
-import type { ProjectInfo } from '../project-discovery.js';
 import { StreamMerger } from '../stream-merger.js';
 import type { CLIOptions, ClaudeCommand } from '../types.js';
 
